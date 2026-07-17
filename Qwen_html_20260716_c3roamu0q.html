@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Memorama de Economía - Nivel Intermedio</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', Tahoma, sans-serif;
+    background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+    min-height: 100vh;
+    color: #fff;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  header {
+    text-align: center;
+    margin-bottom: 15px;
+    width: 100%;
+  }
+  h1 {
+    font-size: clamp(1.3rem, 4vw, 2.2rem);
+    margin-bottom: 5px;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.4);
+  }
+  .subtitle {
+    font-size: 0.9rem;
+    opacity: 0.85;
+  }
+  .stats {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    flex-wrap: wrap;
+    margin: 10px 0 15px;
+    width: 100%;
+    max-width: 700px;
+  }
+  .stat-box {
+    background: rgba(255,255,255,0.15);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.25);
+    border-radius: 12px;
+    padding: 10px 18px;
+    text-align: center;
+    min-width: 110px;
+    flex: 1;
+  }
+  .stat-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    opacity: 0.8;
+    letter-spacing: 1px;
+  }
+  .stat-value {
+    font-size: 1.5rem;
+    font-weight: bold;
+    margin-top: 3px;
+  }
+  .timer.warning { color: #ff6b6b; animation: pulse 1s infinite; }
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+  }
+  #board {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    width: 100%;
+    max-width: 700px;
+    perspective: 1000px;
+  }
+  .card {
+    aspect-ratio: 1 / 1.2;
+    position: relative;
+    cursor: pointer;
+    transform-style: preserve-3d;
+    transition: transform 0.5s;
+  }
+  .card.flipped { transform: rotateY(180deg); }
+  .card.matched { transform: rotateY(180deg); cursor: default; }
+  .card.matched .card-front {
+    box-shadow: 0 0 15px rgba(255,255,255,0.6);
+  }
+  .card-face {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    backface-visibility: hidden;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 8px;
+    font-weight: 600;
+  }
+  .card-back {
+    background: linear-gradient(135deg, #ffd700, #ff8c00);
+    color: #fff;
+    font-size: clamp(1.5rem, 5vw, 2.5rem);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    border: 2px solid rgba(255,255,255,0.3);
+  }
+  .card-back::before {
+    content: "$";
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+  }
+  .card-front {
+    background: var(--pair-color);
+    color: #fff;
+    transform: rotateY(180deg);
+    font-size: clamp(0.7rem, 2vw, 1rem);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    border: 2px solid rgba(255,255,255,0.4);
+    line-height: 1.2;
+  }
+  .card-front .tag {
+    position: absolute;
+    top: 4px;
+    left: 6px;
+    font-size: 0.6rem;
+    background: rgba(0,0,0,0.25);
+    padding: 2px 5px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .controls {
+    margin-top: 15px;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  button {
+    background: linear-gradient(135deg, #ff6b6b, #ee5a6f);
+    color: #fff;
+    border: none;
+    padding: 10px 22px;
+    border-radius: 25px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    transition: transform 0.2s;
+  }
+  button:hover { transform: translateY(-2px); }
+  button:active { transform: translateY(0); }
+  .modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.8);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    padding: 20px;
+  }
+  .modal.active { display: flex; }
+  .modal-content {
+    background: linear-gradient(135deg, #fff, #f0f0f0);
+    color: #333;
+    padding: 30px;
+    border-radius: 20px;
+    text-align: center;
+    max-width: 400px;
+    width: 100%;
+    animation: popIn 0.4s ease;
+  }
+  @keyframes popIn {
+    from { transform: scale(0.5); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+  .modal h2 { font-size: 1.8rem; margin-bottom: 10px; }
+  .modal p { margin-bottom: 15px; font-size: 1rem; }
+  .modal.win h2 { color: #27ae60; }
+  .modal.lose h2 { color: #e74c3c; }
+  @media (max-width: 480px) {
+    #board { gap: 6px; }
+    .stat-box { padding: 8px 10px; min-width: 90px; }
+    .stat-value { font-size: 1.2rem; }
+  }
+</style>
+</head>
+<body>
+  <header>
+    <h1>💰 Memorama de Economía 💰</h1>
+    <p class="subtitle">Nivel Intermedio · Relaciona concepto y definición</p>
+  </header>
+
+  <div class="stats">
+    <div class="stat-box">
+      <div class="stat-label">⏱ Tiempo</div>
+      <div class="stat-value timer" id="timer">02:00</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-label">🎯 Movimientos</div>
+      <div class="stat-value" id="moves">0</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-label">✅ Parejas</div>
+      <div class="stat-value" id="pairs">0 / 8</div>
+    </div>
+  </div>
+
+  <div id="board"></div>
+
+  <div class="controls">
+    <button id="restart">🔄 Reiniciar</button>
+  </div>
+
+  <div class="modal" id="modal">
+    <div class="modal-content" id="modalContent">
+      <h2 id="modalTitle"></h2>
+      <p id="modalText"></p>
+      <button onclick="restartGame()">Jugar de nuevo</button>
+    </div>
+  </div>
+
+<script>
+  const pairs = [
+    { concept: "Inflación", def: "Aumento generalizado y sostenido de los precios", color: "#e74c3c" },
+    { concept: "PIB", def: "Valor total de bienes y servicios producidos", color: "#3498db" },
+    { concept: "Oferta", def: "Cantidad de bienes disponibles en el mercado", color: "#2ecc71" },
+    { concept: "Demanda", def: "Cantidad de bienes que los consumidores desean comprar", color: "#f39c12" },
+    { concept: "Monopolio", def: "Un único vendedor domina todo el mercado", color: "#9b59b6" },
+    { concept: "Elasticidad", def: "Sensibilidad de la demanda ante cambios de precio", color: "#1abc9c" },
+    { concept: "Tasa de interés", def: "Precio o costo del dinero en el tiempo", color: "#e67e22" },
+    { concept: "Recesión", def: "Disminución sostenida de la actividad económica", color: "#34495e" }
+  ];
+
+  const board = document.getElementById('board');
+  const timerEl = document.getElementById('timer');
+  const movesEl = document.getElementById('moves');
+  const pairsEl = document.getElementById('pairs');
+  const modal = document.getElementById('modal');
+  const modalContent = document.getElementById('modalContent');
+  const modalTitle = document.getElementById('modalTitle');
+  const modalText = document.getElementById('modalText');
+
+  let firstCard = null, secondCard = null;
+  let lockBoard = false;
+  let moves = 0, matchedPairs = 0;
+  let timeLeft = 120;
+  let timerInterval = null;
+  let gameActive = false;
+
+  function shuffle(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  function createBoard() {
+    board.innerHTML = '';
+    const cards = [];
+    pairs.forEach((pair, idx) => {
+      cards.push({ type: 'concept', text: pair.concept, color: pair.color, pairId: idx });
+      cards.push({ type: 'def', text: pair.def, color: pair.color, pairId: idx });
+    });
+    shuffle(cards);
+    cards.forEach(c => {
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.dataset.pairId = c.pairId;
+      card.style.setProperty('--pair-color', c.color);
+      card.innerHTML = `
+        <div class="card-face card-back"></div>
+        <div class="card-face card-front" style="background:${c.color}">
+          <span class="tag">${c.type === 'concept' ? 'Concepto' : 'Definición'}</span>
+          ${c.text}
+        </div>
+      `;
+      card.addEventListener('click', () => flipCard(card));
+      board.appendChild(card);
+    });
+  }
+
+  function flipCard(card) {
+    if (!gameActive) return;
+    if (lockBoard) return;
+    if (card.classList.contains('flipped') || card.classList.contains('matched')) return;
+    card.classList.add('flipped');
+    if (!firstCard) {
+      firstCard = card;
+      return;
+    }
+    secondCard = card;
+    moves++;
+    movesEl.textContent = moves;
+    checkMatch();
+  }
+
+  function checkMatch() {
+    const match = firstCard.dataset.pairId === secondCard.dataset.pairId;
+    if (match) {
+      firstCard.classList.add('matched');
+      secondCard.classList.add('matched');
+      matchedPairs++;
+      pairsEl.textContent = `${matchedPairs} / 8`;
+      resetSelection();
+      if (matchedPairs === pairs.length) endGame(true);
+    } else {
+      lockBoard = true;
+      setTimeout(() => {
+        firstCard.classList.remove('flipped');
+        secondCard.classList.remove('flipped');
+        resetSelection();
+      }, 1000);
+    }
+  }
+
+  function resetSelection() {
+    firstCard = null;
+    secondCard = null;
+    lockBoard = false;
+  }
+
+  function startTimer() {
+    clearInterval(timerInterval);
+    timeLeft = 120;
+    updateTimerDisplay();
+    timerInterval = setInterval(() => {
+      timeLeft--;
+      updateTimerDisplay();
+      if (timeLeft <= 30) timerEl.classList.add('warning');
+      if (timeLeft <= 0) {
+        clearInterval(timerInterval);
+        endGame(false);
+      }
+    }, 1000);
+  }
+
+  function updateTimerDisplay() {
+    const m = Math.floor(timeLeft / 60).toString().padStart(2, '0');
+    const s = (timeLeft % 60).toString().padStart(2, '0');
+    timerEl.textContent = `${m}:${s}`;
+  }
+
+  function endGame(won) {
+    gameActive = false;
+    clearInterval(timerInterval);
+    modalContent.className = 'modal-content ' + (won ? 'win' : 'lose');
+    if (won) {
+      modalTitle.textContent = '🎉 ¡Felicidades!';
+      const tiempoRestante = timeLeft;
+      modalText.innerHTML = `Completaste el memorama en <b>${moves} movimientos</b> con <b>${tiempoRestante} segundos</b> restantes.`;
+    } else {
+      modalTitle.textContent = '⏰ ¡Se acabó el tiempo!';
+      modalText.innerHTML = `Lograste <b>${matchedPairs} de 8 parejas</b> en <b>${moves} movimientos</b>. ¡Inténtalo de nuevo!`;
+    }
+    modal.classList.add('active');
+  }
+
+  function restartGame() {
+    modal.classList.remove('active');
+    timerEl.classList.remove('warning');
+    moves = 0;
+    matchedPairs = 0;
+    movesEl.textContent = '0';
+    pairsEl.textContent = '0 / 8';
+    firstCard = null;
+    secondCard = null;
+    lockBoard = false;
+    createBoard();
+    gameActive = true;
+    startTimer();
+  }
+
+  document.getElementById('restart').addEventListener('click', restartGame);
+  restartGame();
+</script>
+</body>
+</html>
